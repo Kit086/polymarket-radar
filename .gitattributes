@@ -1,0 +1,22 @@
+# 将所有文本文件在检出时转换为本地换行符，在提交时转换为 LF
+* text=auto
+
+# 对于需要特定换行符的文件，可以单独指定
+# 例如，强制 shell 脚本使用 LF
+*.sh text eol=lf
+
+# 强制 Windows 批处理文件使用 CRLF
+*.bat text eol=crlf
+.ps1 text eol=crlf
+
+# 对于二进制文件，告诉 Git 不要进行转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.so binary
