@@ -1,0 +1,57 @@
+{
+  "skill_name": "polymarket-radar",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "请帮我做一个中文 Polymarket 热点雷达，只关注 economy 和 tech，输出要适合继续生成分析报告。",
+      "expected_output": "The skill should produce a Chinese structured summary covering economy and tech signals, including per-tag highlights and global top signals.",
+      "files": [],
+      "expectations": [
+        "The output is a JSON object with a non-empty summary field.",
+        "The summary is primarily in Chinese.",
+        "The summary includes '查询 tags: economy, tech' or the equivalent economy/tech-only tag list.",
+        "The summary includes both the per-tag highlights section and the global top signals section.",
+        "At least one selected event includes yes_prob, score, vol24h, liquidity, one_day_price_change, end_date, and why_selected."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Give me an English Polymarket summary for politics and world markets, and highlight the most important active signals with probability and liquidity context.",
+      "expected_output": "The skill should produce an English structured summary focused on politics and world, with market metrics and ranking rationale.",
+      "files": [],
+      "expectations": [
+        "The output is a JSON object with a non-empty summary field.",
+        "The summary is primarily in English.",
+        "The summary includes 'Tags: politics, world' or the equivalent politics/world-only tag list.",
+        "The summary includes at least one event line with yes_prob and liquidity context.",
+        "The summary does not use raw structured JSON as the primary artifact."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "我想做一个未来新闻雷达，重点看 politics、economy、world 这三个 tag，把最值得关注的事件整理成简洁摘要。",
+      "expected_output": "The skill should return a concise radar-style Chinese summary across politics, economy, and world without exposing raw full JSON as the primary output.",
+      "files": [],
+      "expectations": [
+        "The output is a JSON object with a non-empty summary field.",
+        "The summary is primarily in Chinese.",
+        "The summary includes the requested politics, economy, and world tags without unrelated tags taking over the run configuration.",
+        "The summary includes a global top signals section that helps a downstream agent identify the most important cross-tag signals.",
+        "The summary reads like an agent handoff artifact rather than a raw API dump."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Run the Polymarket radar in English for crypto only, but keep it useful for a downstream analyst who needs clean implied probabilities rather than miscellaneous market formats.",
+      "expected_output": "The skill should return an English crypto-focused summary that stays usable for downstream analysis and prefers clean probability-bearing signals.",
+      "files": [],
+      "expectations": [
+        "The output is a JSON object with a non-empty summary field.",
+        "The summary is primarily in English.",
+        "The summary includes 'Tags: crypto' or the equivalent crypto-only tag list.",
+        "Selected signals include concrete yes_prob values instead of n/a placeholders.",
+        "The summary still includes the standard evidence fields such as score, vol24h, liquidity, one_day_price_change, end_date, and why_selected."
+      ]
+    }
+  ]
+}

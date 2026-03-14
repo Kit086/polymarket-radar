@@ -9,4 +9,6 @@ wheels/
 # Virtual environments
 .venv
 
+# Local temp and skill eval outputs
 tmp/
+polymarket-radar-workspace/
