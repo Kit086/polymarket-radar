@@ -12,3 +12,7 @@ wheels/
 # Local temp and skill eval outputs
 tmp/
 polymarket-radar-workspace/
+
+.ruff_cache/
+.sisphus/
+reports/

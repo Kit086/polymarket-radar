@@ -1,32 +1,38 @@
 ---
 name: polymarket-radar
-description: Collect hot Polymarket prediction markets for future-news radar, policy forecasting, macro signals, and technology trend analysis. Use this skill whenever the user wants to scan Polymarket by topic, identify the most important active prediction markets, monitor probabilities and recent movement, or turn market signals into a future-news radar / policy predictor / macro signal / tech trends report. This skill should first call the local script to fetch a summary, then use that summary as evidence to write the final Markdown report in the user's language.
+description: Collect hot Polymarket prediction markets, infer the dominant market narrative, explain what the market thinks is likely to happen next, and write an analytical Markdown report grounded in the script-generated summary. Use this skill whenever the user wants a future-news radar, policy readout, macro signal note, tech trend brief, or asks what Polymarket implies will happen next. This skill should prepare config.json if needed, call the local script, produce a report in the user's language, save it to reports/, and return the same Markdown content.
 ---
 
 # Polymarket Radar
 
-Use this skill to gather read-only market signals from Polymarket and turn them into a final user-facing radar report.
+Use this skill to turn Polymarket market data into a research-style analytical report.
 
-This skill should call the local script to produce a stable evidence `summary`, then immediately write the final Markdown report grounded in that summary.
+This is not a fixed-template summary skill. The goal is to answer a harder question:
+
+- If we treat Polymarket as a prediction market, what does the market think is likely to happen next?
+- What is the evidence?
+- Where are the tensions, contradictions, and tail risks?
 
 ## What this skill does
 
-- Query Polymarket Gamma `/events` with a curated tag set from `config/default.json`.
-- Filter out irrelevant, stale, or low-quality markets.
-- Keep binary Yes/No markets by default so the downstream agent gets usable implied probabilities.
-- Rank markets by heat and momentum.
-- Use the returned `summary` as evidence to write the final radar report.
+- Prepare runtime config from `config/default.json` into `config/config.json` when needed.
+- Call `scripts/polymarket_radar.py` to fetch a read-only `summary`.
+- Treat the returned `summary` as the evidence base.
+- Infer the dominant narrative or main market axis for the current run.
+- Write a Markdown report in the user's language.
+- Save the final Markdown report to `reports/<utc-timestamp>.md`.
 
 ## When to use this skill
 
-Use this skill whenever the task is really about scanning Polymarket for signal detection, even if the user does not explicitly say "use Polymarket" or "generate a summary." Typical triggers include:
+Use this skill whenever the task is really about reading Polymarket as a live forecasting surface rather than merely listing markets. Typical triggers include:
 
 - future news radar
-- policy forecast brief
-- macro signal watchlist
-- tech trend monitoring through prediction markets
-- "what does Polymarket think about X?"
-- scheduled agent jobs that periodically gather market signals before writing a report
+- policy forecast
+- macro signal brief
+- tech trend brief
+- geopolitical market readout
+- "what does Polymarket think will happen?"
+- recurring cron-driven market intelligence jobs
 
 ## Safety and scope
 
@@ -34,18 +40,10 @@ Use this skill whenever the task is really about scanning Polymarket for signal 
 - Do not trade.
 - Do not call order placement endpoints.
 - Do not require login, wallet access, or authenticated APIs.
-- Do not make up fields or market facts.
-- Treat the script-returned `summary` as the primary evidence. Use raw structured output only when debugging.
-- Do not output raw JSON dumps as the final user response.
-
-## Scheduler to agent workflow
-
-Use this skill inside a scheduled pipeline:
-
-1. A scheduler or cron job triggers an agent with a recurring prompt.
-2. That agent invokes `polymarket-radar` with the user's language.
-3. The skill calls the script to collect current market signals.
-4. The skill writes the final user-facing radar report grounded in the returned `summary`.
+- Do not make up market facts that are not supported by the returned `summary`.
+- Use the script-returned `summary` as the primary evidence.
+- Do not output raw JSON as the final user-facing artifact.
+- Make it explicit that market prices are implied probabilities, not confirmed facts.
 
 ## Inputs
 
@@ -62,53 +60,193 @@ Required:
 Guidance:
 
 - `language` should come from the active user context.
-- All non-language settings (tags, thresholds, limits) should come from `config/default.json`.
+- All non-language runtime settings should come from `config/config.json`.
+- `config/default.json` is a backup template, not the live config once `config/config.json` exists.
 
 ## Workflow
 
 1. Choose the runtime `language` from the user context.
-2. Run:
+2. Check whether `config/config.json` exists.
+3. If `config/config.json` does not exist, copy `config/default.json` to `config/config.json`.
+4. Use `config/config.json` as the live runtime config for the script.
+5. Run:
 
 ```bash
 python scripts/polymarket_radar.py <<'EOF'
-{"language":"zh-CN"}
+{"language":"zh-CN","config_path":"config/config.json"}
 EOF
 ```
 
-3. Read the returned JSON and treat the `summary` field as the main evidence artifact.
-4. Write the final Markdown report in the user's language, grounded in the returned `summary`.
-5. If the summary reports that no qualifying signals were found, say so clearly instead of inventing market evidence.
+6. Read the returned JSON and treat the `summary` field as the evidence artifact.
+7. Identify the strongest current market narrative before writing the report.
+8. Write the final Markdown report in the user's language.
+9. Ensure `reports/` exists. If it does not exist, create it.
+10. Save the exact final Markdown report to `reports/<utc-timestamp>.md`.
+11. Return the same Markdown report as the final response.
+12. If the summary reports that no qualifying signals were found, say so clearly instead of inventing evidence.
 
 ## Output contract
 
-Final output MUST be a Markdown report (not JSON).
+Final output MUST be a Markdown report.
 
 Internally, this skill first calls `scripts/polymarket_radar.py`, which returns JSON containing a `summary` string. Use that `summary` as the evidence base.
 
-The Markdown report MUST include 4 fixed sections (localized to the user's language):
+The report MUST:
 
-- future news radar
-- policy predictor
-- macro signals
-- technology trends
+- use the user's language
+- include a localized title and generation time
+- include a localized `Polymarket 当前热点` style hotspot board near the top
+- include real analysis, not just a natural-language rewrite of the summary
+- be saved to `reports/<utc-timestamp>.md`
+
+The report does NOT need to force four equally sized sections every run.
 
 ## Reporting guidance
 
-After the `summary` is returned, write the final report grounded in the returned market evidence. Make it clear that market probabilities are implied probabilities rather than confirmed facts.
+Write the report like an analyst, not a formatter.
 
-Use a compact format suitable for scheduled runs. Prefer short sections with bullet points over long essays.
+Do not start from a rigid template and then force all information to fit. Start from the strongest narrative in the summary, then organize evidence around that narrative.
 
-Use this structure:
+### Preferred report flow
 
-- Title + generated time (from the summary)
-- A short cross-tag highlights block (from the summary's global top signals)
-- 4 fixed sections (future news radar / policy predictor / macro signals / technology trends)
-- Caveats (implied probabilities, low-liquidity noise, uncertainty)
+Use this as a preferred structure, not a rigid fill-in-the-blanks template:
+
+- title + generated time
+- localized hotspot board near the top
+- core judgment
+- market consensus
+- tensions / contradictions
+- logic chain
+- risk scenario / what the market may be underpricing
+- optional secondary sections for policy / macro / tech / geopolitics / crypto when they genuinely matter in this run
+- caveats
+
+### Hotspot board
+
+Near the top of the report, add a localized hotspot board equivalent to `Polymarket 当前热点`.
+
+Rules:
+
+- use small Markdown tables
+- group by topic when the summary supports it
+- prefer 3-5 rows per topic
+- use simple columns such as:
+  - `市场 | 概率 | 交易量`
+  - `市场 | 领跑者 | 概率`
+- only include markets supported by the summary
+
+The hotspot board is for rapid scanning. It should not replace the deeper analysis below.
+
+### Core judgment
+
+Early in the report, answer this directly:
+
+- what does the market think is most likely to happen next?
+- what is the dominant narrative in this run?
+
+Use concise judgment-first language such as:
+
+- 核心判断
+- 本期判断
+- The market is really pricing...
+- The dominant narrative is...
+
+This is allowed and encouraged, as long as it is evidence-backed.
+
+### Market consensus
+
+After the core judgment, group the key signals into a coherent consensus view.
+
+Do not just restate one market after another. Instead explain:
+
+- what the market broadly expects
+- what the market does not expect immediately
+- what kind of path the market is pricing
+
+### Tensions and contradictions
+
+This is a required analytical move whenever the summary supports it.
+
+Actively look for combinations such as:
+
+- escalation odds are high but ultimate ceasefire odds are also high
+- a disruptive geopolitical event is priced aggressively but downstream macro outcomes are only moderately priced
+- short-term and long-term markets imply different paths
+
+Then say what that likely means.
+
+This is one of the main sources of analytical value. Do not skip it when the evidence exists.
+
+### Logic chain
+
+Turn isolated markets into linked causality where justified by the summary. For example:
+
+- geopolitical stress -> energy prices -> inflation pressure -> rate path -> recession risk
+- AI model leadership -> large-cap valuation narrative -> capital markets preference -> IPO attention
+- conflict escalation -> political positioning -> election narrative
+
+Do not invent facts. Only connect links that are reasonably supported by the market evidence in the summary.
+
+### Risk scenario and underpriced tail
+
+Include a short section on what the market may be underpricing when the summary supports it.
+
+Useful prompts to follow:
+
+- what is the market's main scenario?
+- what would break that scenario?
+- what tail risk appears insufficiently priced?
+
+It is acceptable to say things like:
+
+- 市场可能低估了……
+- the market may be underpricing...
+- the tail risk here is...
+
+But each such claim should be supported by at least two relevant signals where possible.
+
+### Secondary sections are optional and uneven
+
+Policy, macro, tech, future-news, geopolitics, elections, crypto, and similar dimensions are still useful.
+
+But do not force equal coverage.
+
+Rules:
+
+- if one theme dominates the run, spend most of the report there
+- if a secondary theme is weak in the summary, keep it brief
+- if a dimension is not meaningfully represented, do not invent a full section just for symmetry
+
+### Evidence discipline
+
+Prefer argument coverage over field coverage.
+
+That means:
+
+- do not mechanically repeat every field in every paragraph
+- only cite `yes_prob`, `vol24h`, liquidity, price change, or dates when they help support the point
+- after every major judgment, make the basis visible
+
+In other words, the report should implicitly answer:
+
+- what do you think will happen?
+- why?
+
+### Tone
+
+Target a report that feels like a sharp internal market note:
+
+- concise but not dry
+- analytical but not overblown
+- clear about uncertainty
+- willing to express a view
+- disciplined about evidence
 
 ## Examples
 
 **Example 1:**
-Input task: "看一下 Polymarket 里最近最值得关注的市场，给我一份中文雷达报告"
+Input task: "分析一下这些数据。假定我们把 polymarket 当作一个预测市场，你觉得未来会发生什么？依据是什么？请用中文。"
+
 Suggested tool input (skill -> script):
 
 ```json
@@ -117,8 +255,16 @@ Suggested tool input (skill -> script):
 }
 ```
 
+Expected reporting style:
+
+- first show a localized hotspot board
+- then lead with a core judgment
+- then explain the market consensus, tensions, logic chain, and risks
+- do not force balanced four-way sections if one theme clearly dominates
+
 **Example 2:**
-Input task: "Give me an English radar report based on the hottest prediction markets on Polymarket."
+Input task: "Give me an English analytical note on what Polymarket currently implies will happen next."
+
 Suggested tool input (skill -> script):
 
 ```json
@@ -126,3 +272,10 @@ Suggested tool input (skill -> script):
   "language": "en-US"
 }
 ```
+
+Expected reporting style:
+
+- concise Markdown
+- hotspot board first
+- analyst-style judgment, not summary paraphrase
+- explicit evidence and caveats

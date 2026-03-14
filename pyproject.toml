@@ -1,6 +1,6 @@
 [project]
 name = "polymarket-radar"
-version = "0.0.2"
+version = "0.0.3"
 description = "Skill assets and runtime tool for collecting Polymarket radar summaries"
 readme = "README.md"
 requires-python = ">=3.10"
